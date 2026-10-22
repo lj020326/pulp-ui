@@ -1,0 +1,6 @@
+{
+  "API_BASE_PATH": "${API_BASE_PATH}",
+  "UI_BASE_PATH": "${UI_BASE_PATH}",
+  "UI_EXTERNAL_LOGIN_URI": null,
+  "EXTRA_VERSION": ""
+}

@@ -1,22 +1,35 @@
-# WARNING
-# This Dockerfile is intended for development purposes only. Do not use it for production deployments
-# Copied from https://github.com/ansible/ansible-hub-ui/blob/master/Dockerfile
+# Stage 1: Build the static assets
+FROM node:24-alpine AS builder
+WORKDIR /app
 
-FROM node:24-alpine
-WORKDIR /pulp/
+# Install git so webpack can resolve the commit hash
+RUN apk add --no-cache git
 
-RUN mkdir -p /pulp/app/ && \
-    apk add --no-cache git && \
-    git config --global --add safe.directory /pulp/app
+COPY package.json package-lock.json ./
+RUN npm install --legacy-peer-deps
+COPY . .
+RUN npm run build
 
-# install npm in /pulp and mount the app in /pulp/app so that the installed node_modules
-# doesn't trample node_modules on your computer. see https://www.docker.com/blog/keep-nodejs-rockin-in-docker/ for details
-COPY package.json package-lock.json /pulp/
-RUN npm install
+# Stage 2: Serve the static files via Nginx
+FROM nginx:alpine
+# Remove default nginx welcome page and assets
+RUN rm -rf /usr/share/nginx/html/*
 
-# make webpack-dev-sever and other node packages executable
-ENV PATH /pulp/node_modules/.bin:$PATH
+# Create the nested directory structure matching WEBPACK_PUBLIC_PATH
+RUN mkdir -p /usr/share/nginx/html/static/pulp_ui
 
-WORKDIR /pulp/app
-EXPOSE 8002
-CMD ["npm", "run", "start"]
+# Copy compiled bundles into the static path prefix
+COPY --from=builder /app/dist /usr/share/nginx/html/static/pulp_ui
+
+# Copy index.html and config JSON to the root nginx web directory
+COPY --from=builder /app/dist/index.html /usr/share/nginx/html/index.html
+COPY --from=builder /app/pulp-ui-config.json /usr/share/nginx/html/pulp-ui-config.json
+
+# Copy custom Nginx configuration template
+COPY default.conf.template /etc/nginx/templates/default.conf.template
+
+# Nginx entrypoint automatically processes templates in /usr/share/nginx/html/ to /usr/share/nginx/html/
+COPY pulp-ui-config.json.template /usr/share/nginx/html/pulp-ui-config.json.template
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
