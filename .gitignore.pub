@@ -1,0 +1,43 @@
+.*.sw[po]
+.DS_Store
+.idea/
+.vscode/
+coverage/
+cypress/downloads/*
+cypress/fixtures/example.json
+cypress/screenshots/*
+cypress/videos/*
+dist/
+node_modules/
+npm-debug.log*
+
+# Packaged LLM context (regenerated each run; large)
+.package_dir.context.yml
+.package_dir.*.yml
+**/index_package.tar.gz
+
+.code_index/
+.rsync/
+venv/
+save/
+*~
+*.retry
+*.log
+.vault_pass
+
+# ---------------------------------------------------------------------------
+# avoid push to public
+# ---------------------------------------------------------------------------
+archive/
+.wiki/
+raw/
+id_rsa
+private/
+files/private/
+vars/vault.yml
+vars/secrets.yml
+vault.yml
+vaulted-credentials.yml
+*.vault.yml
+secrets.yml
+*.secrets.yml
