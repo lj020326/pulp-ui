@@ -1,22 +1,20 @@
-# WARNING
-# This Dockerfile is intended for development purposes only. Do not use it for production deployments
-# Copied from https://github.com/ansible/ansible-hub-ui/blob/master/Dockerfile
+# Stage 1: Build the static assets
+FROM node:24-alpine AS builder
+WORKDIR /app
 
-FROM node:24-alpine
-WORKDIR /pulp/
+# Install git so webpack can resolve the commit hash
+RUN apk add --no-cache git
 
-RUN mkdir -p /pulp/app/ && \
-    apk add --no-cache git && \
-    git config --global --add safe.directory /pulp/app
-
-# install npm in /pulp and mount the app in /pulp/app so that the installed node_modules
-# doesn't trample node_modules on your computer. see https://www.docker.com/blog/keep-nodejs-rockin-in-docker/ for details
-COPY package.json package-lock.json /pulp/
+COPY package.json package-lock.json ./
 RUN npm install --legacy-peer-deps
+COPY . .
+RUN npm run build
 
-# make webpack-dev-sever and other node packages executable
-ENV PATH /pulp/node_modules/.bin:$PATH
+# Stage 2: Serve the static files via Nginx
+FROM nginx:alpine
+# Create the nested directory structure expected by the bundle references
+RUN mkdir -p /usr/share/nginx/html/static/pulp_ui
+COPY --from=builder /app/dist /usr/share/nginx/html/static/pulp_ui
 
-WORKDIR /pulp/app
-EXPOSE 8002
-CMD ["npm", "run", "start"]
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
